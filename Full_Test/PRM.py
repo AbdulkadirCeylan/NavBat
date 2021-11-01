@@ -295,7 +295,7 @@ def mainn(sx,sy):
     assert rx, 'Cannot found path'
 
     if show_animation:
-        plt.plot(rx, ry,"-r", linewidth=1.0)
+        plt.plot(rx, ry,"-r", linewidth=2.0)
         plt.pause(0.001)
         #plt.show()
 
