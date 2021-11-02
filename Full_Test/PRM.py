@@ -17,7 +17,7 @@ from darknet_ros_msgs.msg import BoundingBoxes, ObjectCount
 # parameter
 N_SAMPLE = 4000  # number of sample_points
 N_KNN = 10  # number of edge from one sampled point
-MAX_EDGE_LEN = 15.0  # [m] Maximum edge length
+MAX_EDGE_LEN = 30.0  # [m] Maximum edge length
 
 show_animation = True
 class Node:
@@ -248,7 +248,7 @@ def mainn(sx,sy):
     #sy = 5.0  # [m]
     gx = 20.0  # [m]
     gy = 20.0  # [m]
-    robot_size = 1.0  # [m]
+    robot_size = 3.0  # [m]
 
     ox = []
     oy = []
@@ -274,11 +274,11 @@ def mainn(sx,sy):
     for i in range(2):
         for k in range(2):
             ox.append(12.0 +k)
-            oy.append(15+i)
+            oy.append(17+i)
 
     for i in range(2):
         for k in range(2):
-            ox.append(17.0 +k)
+            ox.append(19.0 +k)
             oy.append(10+i)
 
     #if show_animation:
