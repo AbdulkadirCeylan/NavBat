@@ -141,7 +141,7 @@ class QuadCopterEnv(gym.Env):
         move_as_y = math.sin(w)*0.3
         self.distance = 1
         t1 = time.time()
-        err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle,-1,[loc_x+move_as_x,loc_y +move_as_y,1],vrep.simx_opmode_streaming)
+        err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle,-1,[loc_x+move_as_x,loc_y +move_as_y,1.25],vrep.simx_opmode_streaming)
         while self.distance > 0.15:
             self.distance =  self.calculate_target_distance(loc_x+move_as_x,loc_y +move_as_y)
             if(time.time()-t1) >10:
