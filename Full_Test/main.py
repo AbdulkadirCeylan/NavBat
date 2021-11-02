@@ -44,10 +44,9 @@ class Main:
                 _, local_pos = vrep.simxGetObjectPosition(clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
                 x_ax = local_pos[0]
                 y_ax = local_pos[1]
-                #plt.scatter(local_pos[0], local_pos[1],color = '#88c999')
 
                 plt.plot(x_ax, y_ax, '-p', color='gray',
-                    markersize=15, linewidth=4,
+                    markersize=10, linewidth=4,
                     markerfacecolor='white',
                     markeredgecolor='gray',
                     markeredgewidth=2)
@@ -129,9 +128,8 @@ class Main:
                 start_x = local_pos[0]
                 start_y = local_pos[1]
                 rx_sampled, ry_sampled = PRM.mainn(start_x,start_y)
-                print(rx_sampled,ry_sampled)
                 target_reached,done = self.PRM_action(rx_sampled,ry_sampled)
-                #print(target_reached,done)
+
 if __name__ == '__main__':
     cl = Main()
     cl.main()
