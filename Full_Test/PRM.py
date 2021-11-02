@@ -266,18 +266,18 @@ def mainn(sx,sy):
         ox.append(0.0)
         oy.append(i)
 
-    for i in range(3):
-        for k in range(3):
+    for i in range(2):
+        for k in range(2):
             ox.append(8.0 +k)
             oy.append(9+i)
 
-    for i in range(3):
-        for k in range(3):
+    for i in range(2):
+        for k in range(2):
             ox.append(12.0 +k)
             oy.append(15+i)
 
-    for i in range(3):
-        for k in range(3):
+    for i in range(2):
+        for k in range(2):
             ox.append(17.0 +k)
             oy.append(10+i)
 
