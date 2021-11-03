@@ -246,9 +246,9 @@ def mainn(sx,sy):
     # start and goal position
     #sx = 5.0  # [m]
     #sy = 5.0  # [m]
-    gx = 20.0  # [m]
-    gy = 20.0  # [m]
-    robot_size = 3.0  # [m]
+    gx = 18.0  # [m]
+    gy = 24.0  # [m]
+    robot_size = 2.0  # [m]
 
     ox = []
     oy = []
@@ -268,8 +268,23 @@ def mainn(sx,sy):
 
     for i in range(2):
         for k in range(2):
-            ox.append(8.0 +k)
+            ox.append(4.0 +k)
             oy.append(9+i)
+
+    for i in range(2):
+        for k in range(2):
+            ox.append(12.0 +k)
+            oy.append(9+i)
+
+    for i in range(2):
+        for k in range(2):
+            ox.append(20.0 +k)
+            oy.append(9+i)
+
+    for i in range(2):
+        for k in range(2):
+            ox.append(4.0 +k)
+            oy.append(17+i)
 
     for i in range(2):
         for k in range(2):
@@ -278,8 +293,8 @@ def mainn(sx,sy):
 
     for i in range(2):
         for k in range(2):
-            ox.append(19.0 +k)
-            oy.append(10+i)
+            ox.append(20.0 +k)
+            oy.append(17+i)
 
     #if show_animation:
         plt.plot(ox, oy,".k")
