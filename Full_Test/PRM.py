@@ -15,7 +15,7 @@ from darknet_ros_msgs.msg import BoundingBoxes, ObjectCount
 
 
 # parameter
-N_SAMPLE = 4000  # number of sample_points
+N_SAMPLE = 2000  # number of sample_points
 N_KNN = 10  # number of edge from one sampled point
 MAX_EDGE_LEN = 30.0  # [m] Maximum edge length
 

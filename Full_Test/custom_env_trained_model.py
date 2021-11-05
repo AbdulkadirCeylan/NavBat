@@ -131,7 +131,7 @@ class QuadCopterEnv(gym.Env):
             sum_360 = x_deg + desired_x
             if(time.time()-t0) >10:
                 break
-            
+
         self.err_code,self.local_yaw = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)
         self.err_code,self.local_pos = vrep.simxGetObjectPosition(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)
         w = self.local_yaw[2]
