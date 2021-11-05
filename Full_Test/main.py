@@ -63,17 +63,20 @@ class Main:
                 x_deg = abs(x * 180/math.pi)
                 desired_x = abs(local_angles[2]*180/math.pi)
                 sum_360 = x_deg + desired_x
-                
-                while not (abs(local_angles[2])-0.15 < abs(x) and  abs(x) < abs(local_angles[2])+0.15) and not ((sum_360)+5 > 360 and (sum_360)-5 < 360):
+                t0 = time.time()
+                while not (abs(local_angles[2])-0.1 < abs(x) and  abs(x) < abs(local_angles[2])+0.1) and not ((sum_360)+5 > 360 and (sum_360)-5 < 360):
                     _, local_angles = vrep.simxGetObjectOrientation(clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)
                     desired_x = abs(local_angles[2]*180/math.pi)
                     sum_360 = x_deg + desired_x
-
+                    if(time.time()-t0) >4:
+                        break
                 _ = vrep.simxSetObjectPosition(clientID_aux,self.target_handle,-1,[rx_sampled[k],ry_sampled[k],1],vrep.simx_opmode_streaming)
                 dst = 1
-                while dst > 0.15:
+                t1 = time.time()
+                while dst > 0.1:
                     dst,theta = self.calculate_step_dist(rx_sampled[k],ry_sampled[k])
-
+                    if(time.time()-t1) >4:
+                        break
 
             else: # Else run RL code to escape from human
                 done = DQN_trained_model.main()  # Replace deneme_code with Trained RL Model

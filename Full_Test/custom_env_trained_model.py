@@ -125,11 +125,11 @@ class QuadCopterEnv(gym.Env):
         desired_x = abs(self.local_angles[2]*180/math.pi)
         sum_360 = x_deg + desired_x
         t0 = time.time()
-        while not (abs(self.local_angles[2])-0.075 < abs(x) and  abs(x) < abs(self.local_angles[2])+0.075) and not ((sum_360)+5 > 360 and (sum_360)-5 < 360):
+        while not (abs(self.local_angles[2])-0.1 < abs(x) and  abs(x) < abs(self.local_angles[2])+0.1) and not ((sum_360)+5 > 360 and (sum_360)-5 < 360):
             self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)
             desired_x = abs(self.local_angles[2]*180/math.pi)
             sum_360 = x_deg + desired_x
-            if(time.time()-t0) >10:
+            if(time.time()-t0) >5:
                 break
 
         self.err_code,self.local_yaw = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)
@@ -144,7 +144,7 @@ class QuadCopterEnv(gym.Env):
         err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle,-1,[loc_x+move_as_x,loc_y +move_as_y,1.25],vrep.simx_opmode_streaming)
         while self.distance > 0.15:
             self.distance =  self.calculate_target_distance(loc_x+move_as_x,loc_y +move_as_y)
-            if(time.time()-t1) >10:
+            if(time.time()-t1) >5:
                 break
 
         data_pose, data_imu = self.take_observation()
