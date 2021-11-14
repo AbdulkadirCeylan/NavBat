@@ -10,7 +10,7 @@ import imutils
 import rospy
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
-
+from darknet_ros_msgs.msg import BoundingBoxes
 
 
 vrep.simxFinish(-1)
@@ -23,6 +23,18 @@ else:
 
 fake_img = cv2.imread('mushroom.jpeg')
 img_pub = rospy.Publisher('/vrep_image', Image,queue_size=10)
+temporary_state=np.zeros(10)
+temporary_state_cntboxes=np.zeros(10)
+def box_callback(data):
+    print(data.bounding_boxes[1].xmin)
+    for i in range(len(data.bounding_boxes)):
+        x_center = (data.bounding_boxes[i].xmin + (data.bounding_boxes[i].xmax - data.bounding_boxes[i].xmin)/2)/5
+        y_center = data.bounding_boxes[i].ymin + (data.bounding_boxes[i].ymax - data.bounding_boxes[i].ymin)/2
+        area = (data.bounding_boxes[i].xmax-data.bounding_boxes[i].xmin) * (data.bounding_boxes[i].ymax-data.bounding_boxes[i].ymin)
+        area = round(area/1000)
+        temporary_state[i]=area
+        temporary_state_cntboxes[i]=x_center
+rospy.Subscriber('darknet_ros/bounding_boxes',BoundingBoxes,box_callback)
 rospy.init_node('image', anonymous=True)
 rate = rospy.Rate(60.0)
 res,v0=vrep.simxGetObjectHandle(clientID_aux,'Vision_sensor',vrep.simx_opmode_oneshot_wait) 

@@ -49,8 +49,11 @@ class QuadCopterEnv(gym.Env):
         self.target_location = Point(0,0,0)
         self.prev_area = 0
         self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Discrete(1)
+        self.observation_space = spaces.Box(low=0,high=50,shape=(1,20))
         self.reward_range = (-np.inf, np.inf)
+        self.temporary_state=np.zeros(shape=(1,20))
+        self.previous_area=0
+        self.previous_x=0
         self.seed()
 
 
@@ -65,20 +68,22 @@ class QuadCopterEnv(gym.Env):
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-    
+
     def box_callback(self,data):
-        
-        for box in data.bounding_boxes:
-            self.x_center = (box.xmin + (box.xmax - box.xmin)/2)/5
-            self.y_center = box.ymin + (box.ymax - box.ymin)/2
-            self.area = (box.xmax-box.xmin) * (box.ymax-box.ymin)
+        self.temporary_state=np.zeros(shape=(1,20))
+        #print(data.bounding_boxes[1].xmin)
+        for i in range(len(data.bounding_boxes)):
+            self.x_center = (data.bounding_boxes[i].xmin + (data.bounding_boxes[i].xmax - data.bounding_boxes[i].xmin)/2)/5
+            self.y_center = data.bounding_boxes[i].ymin + (data.bounding_boxes[i].ymax - data.bounding_boxes[i].ymin)/2
+            self.area = (data.bounding_boxes[i].xmax-data.bounding_boxes[i].xmin) * (data.bounding_boxes[i].ymax-data.bounding_boxes[i].ymin)
             self.area = round(self.area/1000)
+            
+            self.temporary_state[0,i]=self.area
+            self.temporary_state[0,i+10]=self.x_center
             #if self.x_center > 128:
                 #self.box_coor = (self.x_center - 128)/5
             #else:
                 #self.box_coor = (128 - self.x_center)/5
-            
-
     def reset(self):
         self.area = 0
         self.best_distance = 20
@@ -99,9 +104,8 @@ class QuadCopterEnv(gym.Env):
         time.sleep(1)
         #data_pose, data_imu = self.take_observation()
         #fresh_distance,theta =  self.calculate_target_distance()
-        observation = self.x_center
+        observation = self.temporary_state
         return observation
-
 
     def step(self, action):
         
@@ -150,13 +154,12 @@ class QuadCopterEnv(gym.Env):
         data_pose, data_imu = self.take_observation()
         reward,done = self.process_data(data_pose, data_imu,self.distance,self.eulers) 
 
-        if self.prev_area == self.area:
-            self.area = 0
-            self.x_center = 0
-        else:
-            self.prev_area = self.area
-
-        state = self.x_center
+        if(self.previous_area==self.area and self.previous_x==self.x_center):
+                self.temporary_state=np.ones(shape=(1,20))
+        self.previous_area=self.area
+        self.previous_x=self.x_center
+        state = self.temporary_state
+        print(self.temporary_state)
         return state, reward, done, {}
 
     def take_observation (self):
