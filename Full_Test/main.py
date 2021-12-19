@@ -44,7 +44,7 @@ class Main:
                 _, local_pos = vrep.simxGetObjectPosition(clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
                 x_ax = local_pos[0]
                 y_ax = local_pos[1]
-
+                
                 plt.plot(x_ax, y_ax, '-p', color='gray',
                     markersize=10, linewidth=4,
                     markerfacecolor='white',

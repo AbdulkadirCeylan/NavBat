@@ -84,6 +84,9 @@ class QuadCopterEnv(gym.Env):
                 #self.box_coor = (self.x_center - 128)/5
             #else:
                 #self.box_coor = (128 - self.x_center)/5
+
+        print(self.area)
+            
     def reset(self):
         self.area = 0
         self.best_distance = 20
@@ -155,10 +158,16 @@ class QuadCopterEnv(gym.Env):
         reward,done = self.process_data(data_pose, data_imu,self.distance,self.eulers) 
 
         if(self.previous_area==self.area and self.previous_x==self.x_center):
-                self.temporary_state=np.ones(shape=(1,20))
+            self.temporary_state=np.ones(shape=(1,20))
+        else:
+            state = self.area
+        
+
+
+        ####### state is not working ### temporary state !!
+
         self.previous_area=self.area
         self.previous_x=self.x_center
-        state = self.temporary_state
         print(self.temporary_state)
         return state, reward, done, {}
 
