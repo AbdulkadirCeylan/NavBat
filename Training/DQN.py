@@ -13,7 +13,7 @@ env = gym.make('QuadcopterLiveShow-v0')
 model = DQN(MlpPolicy, env, verbose=1,tensorboard_log="./DQN_TR-v0_tensorboard/")
 model.learn(total_timesteps=5000, tb_log_name="second_run")
 cum_rew = []
-model.save("Training-v1")
+#model.save("Training-v1")
 
 #done = False
 #cumulated_reward = 0
