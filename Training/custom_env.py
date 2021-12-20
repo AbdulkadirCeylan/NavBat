@@ -14,6 +14,8 @@ from geometry_msgs.msg import Point
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import random
+from sklearn import preprocessing
+
 #register the training environment in the gym as an available one
 reg = register(
     id='QuadcopterLiveShow-v0',
@@ -73,25 +75,22 @@ class QuadCopterEnv(gym.Env):
         self.temporary_state=np.zeros(shape=(1,20))
         #print(data.bounding_boxes[1].xmin)
         for i in range(len(data.bounding_boxes)):
-            self.x_center = (data.bounding_boxes[i].xmin + (data.bounding_boxes[i].xmax - data.bounding_boxes[i].xmin)/2)/5
+            self.x_center = (data.bounding_boxes[i].xmin + (data.bounding_boxes[i].xmax - data.bounding_boxes[i].xmin)/2)/10
             self.y_center = data.bounding_boxes[i].ymin + (data.bounding_boxes[i].ymax - data.bounding_boxes[i].ymin)/2
             self.area = (data.bounding_boxes[i].xmax-data.bounding_boxes[i].xmin) * (data.bounding_boxes[i].ymax-data.bounding_boxes[i].ymin)
-            self.area = round(self.area/1000)
-            
+            self.area = round(self.area/250)
             self.temporary_state[0,i]=self.area
             self.temporary_state[0,i+10]=self.x_center
             #if self.x_center > 128:
                 #self.box_coor = (self.x_center - 128)/5
             #else:
                 #self.box_coor = (128 - self.x_center)/5
-
-        print(self.area)
             
     def reset(self):
         self.area = 0
         self.best_distance = 20
-        y = random.randint(-6,-5)
-        x = random.randint(-3,-2)
+        y = random.randint(-2,2)
+        x = random.randint(-2,2)
         yaw = random.random()*3
         #y_target = random.randint(-2,2)
         #err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle_target,-1,[12,y_target,1],vrep.simx_opmode_streaming)  # Problem is opmode_streaming
@@ -159,13 +158,8 @@ class QuadCopterEnv(gym.Env):
 
         if(self.previous_area==self.area and self.previous_x==self.x_center):
             self.temporary_state=np.ones(shape=(1,20))
-        else:
-            state = self.area
         
-
-
-        ####### state is not working ### temporary state !!
-
+        state = self.temporary_state
         self.previous_area=self.area
         self.previous_x=self.x_center
         print(self.temporary_state)
@@ -199,12 +193,12 @@ class QuadCopterEnv(gym.Env):
             done = True
             print("Out of area")
 
-        if self.area > 16:
-            #reward -= 500
+        if self.temporary_state[0,0:9].any() > 12:
+            reward -= 5
             done = True
             print("Crashed with Human")
             
-        if (self.x_center < 34 and self.x_center >16):
+        if (self.temporary_state[0,10:20].any() < 34 and self.temporary_state[0,10:20].any() >16):
             reward -= 5
         else:
             reward = +5
