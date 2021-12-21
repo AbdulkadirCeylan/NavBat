@@ -44,12 +44,9 @@ class QuadCopterEnv(gym.Env):
         self.err_code,self.local_pos_drone = vrep.simxGetObjectPosition(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_blocking)
         self.err_code, self.eulers = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
-        self.best_distance = 20
         self.area = 0
         self.x_center = 0
-        self.previous_area = 0
         self.target_location = Point(0,0,0)
-        self.prev_area = 0
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(low=0,high=50,shape=(1,20))
         self.reward_range = (-np.inf, np.inf)
@@ -88,7 +85,6 @@ class QuadCopterEnv(gym.Env):
             
     def reset(self):
         self.area = 0
-        self.best_distance = 20
         y = random.randint(-2,2)
         x = random.randint(-2,2)
         yaw = random.random()*3
