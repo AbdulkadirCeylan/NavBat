@@ -42,6 +42,8 @@ class QuadCopterEnv(gym.Env):
         self.err_code,self.local_pos_drone = vrep.simxGetObjectPosition(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_blocking)
         self.err_code, self.eulers = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
+        res,data_u1=vrep.simxGetStringSignal(self.clientID_aux,'myPtsu1',vrep.simx_opmode_streaming)
+        res,data_u2=vrep.simxGetStringSignal(self.clientID_aux,'myPtsu2',vrep.simx_opmode_streaming)
         self.best_distance = 20
         self.area = 0
         self.x_center = 0
@@ -53,6 +55,31 @@ class QuadCopterEnv(gym.Env):
         self.reward_range = (-np.inf, np.inf)
         self.seed()
 
+    def readLidarData(self):
+        res,data_u1=vrep.simxGetStringSignal(self.clientID_aux,'myPtsu1',vrep.simx_opmode_buffer)
+        res,data_u2=vrep.simxGetStringSignal(self.clientID_aux,'myPtsu2',vrep.simx_opmode_buffer)
+        data_u1=vrep.simxUnpackFloats(data_u1)
+        data_u2=vrep.simxUnpackFloats(data_u2)
+        data_u1=np.array(data_u1)
+        data_u2=np.array(data_u2)
+        
+        if len(data_u1>1):
+            laser_beam_u1=np.zeros(45)
+            laser_beam_u2=np.zeros(45)
+            for k in range(45):
+                laser_beam_u1[k]=data_u1[5+4*k]
+                laser_beam_u2[k]=data_u2[5+4*k]    
+            laser_beam_u1 = np.insert(laser_beam_u1,45,laser_beam_u2)
+            laser_beam_u1[laser_beam_u1<0.01]=2000
+            r_min=laser_beam_u1[laser_beam_u1<1.5]    
+            b_angles = np.where(laser_beam_u1<1.5) 
+            if not len(r_min)==0:
+                r=(r_min[0]+r_min[len(r_min)-1])/2
+                angles = (b_angles[0][0]+b_angles[0][len(b_angles)-1])/2
+            else:
+                r = 2000
+                angles = 180
+        return r,angles
 
     def calculate_target_distance(self,target_location_x,target_location_y):
         self.err_code,self.local_pos = vrep.simxGetObjectPosition(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)
@@ -107,6 +134,7 @@ class QuadCopterEnv(gym.Env):
         
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code,self.local_yaw = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)
+
         w = self.local_yaw[2]
         if (action == 0):
             degree = -30*math.pi/180
@@ -142,10 +170,20 @@ class QuadCopterEnv(gym.Env):
         self.distance = 1
         t1 = time.time()
         err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle,-1,[loc_x+move_as_x,loc_y +move_as_y,1.25],vrep.simx_opmode_streaming)
-        while self.distance > 0.15:
+        while self.distance > 0.10:
             self.distance =  self.calculate_target_distance(loc_x+move_as_x,loc_y +move_as_y)
             if(time.time()-t1) >5:
                 break
+        
+
+        ####### Lidar Distance Check ######
+        distance,bearing = self.readLidarData()
+        while distance < 1.5:
+            distance,bearing = self.readLidarData()
+            print(distance,bearing)
+            w = self.local_yaw[2]
+            degree = -bearing*math.pi/180
+            err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle,-1,[0,0,w+degree],vrep.simx_opmode_streaming)  # Left
 
         data_pose, data_imu = self.take_observation()
         reward,done = self.process_data(data_pose, data_imu,self.distance,self.eulers) 
