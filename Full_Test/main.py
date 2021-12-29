@@ -13,7 +13,7 @@ import PRM
 import DQN_trained_model
 
 
-rospy.init_node("my_node",anonymous=True)
+#rospy.init_node("my_node",anonymous=True)
 
 vrep.simxFinish(-1)
 clientID_aux = vrep.simxStart('127.0.0.1',19997,True,True,5000,5)
@@ -27,7 +27,7 @@ else:
 
 class Main:
     def __init__(self):
-         
+
         self.err_code,self.target_handle = vrep.simxGetObjectHandle(clientID_aux,"Quadcopter_target",vrep.simx_opmode_blocking)
         self.err_code,self.target_handle_1 = vrep.simxGetObjectHandle(clientID_aux,"Quadcopter",vrep.simx_opmode_blocking)
         rospy.Subscriber('darknet_ros/bounding_boxes',BoundingBoxes,self.box_callback)
