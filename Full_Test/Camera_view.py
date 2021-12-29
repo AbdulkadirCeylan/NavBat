@@ -44,23 +44,24 @@ while True:
         Rotated2_image = cv2.flip(Rotated1_image,1)
         msg_frame = CvBridge().cv2_to_imgmsg(Rotated2_image,"bgr8")
         img_pub.publish(msg_frame)
-        x1 = tracking.x_min
-        y1 = tracking.y_max
-        x2 = tracking.x_max
-        y2 = tracking.y_min
-        ### Draw bounding box on original image
-        #cv2.rectangle(Rotated2_image,(x1, y1), (x2, y2), color, 2)
+
         
         if tracking.done is True:
+            x1 = tracking.x_min
+            y1 = tracking.y_max
+            x2 = tracking.x_max
+            y2 = tracking.y_min
+            ### Draw bounding box on original image
+            cv2.rectangle(Rotated2_image,(x1, y1), (x2, y2), color, 2)
             ### Sub-part of Detected image
-
             detected_greyscale = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
             sub_img = detected_greyscale[y2:y1,x1:x2]
 
             #### Correlation ####
-            cor = signal.correlate2d (detected_greyscale,sub_img)
-            #print(cor.shape)
-            cv2.imshow('frame', sub_img)
+            cor = signal.correlate2d (detected_greyscale,sub_img,boundary='symm',mode='full')
+            print(cor)
+            print(x1,x2,y1,y2)
+            cv2.imshow('frame', cor)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
