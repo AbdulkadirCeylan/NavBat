@@ -26,7 +26,8 @@ else:
     sys.exit("Could not connect")
 
 class Main:
-    def __init__(self):  
+    def __init__(self): 
+        rospy.init_node("yolo")
         self.err_code,self.target_handle = vrep.simxGetObjectHandle(clientID_aux,"Quadcopter_target",vrep.simx_opmode_blocking)
         self.err_code,self.target_handle_1 = vrep.simxGetObjectHandle(clientID_aux,"Quadcopter",vrep.simx_opmode_blocking)
         rospy.Subscriber('darknet_ros/bounding_boxes',BoundingBoxes,self.box_callback)
