@@ -15,6 +15,9 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 import random
 from sklearn import preprocessing
+import cv2
+from cv_bridge import CvBridge, CvBridgeError
+import imutils
 
 #register the training environment in the gym as an available one
 reg = register(
@@ -37,7 +40,7 @@ class QuadCopterEnv(gym.Env):
 
         rospy.init_node("custom_env",anonymous=True)
         rospy.Subscriber('darknet_ros/bounding_boxes',BoundingBoxes,self.box_callback)
-        #self.err_code,self.target_handle_target = vrep.simxGetObjectHandle(self.clientID_aux,"Target",vrep.simx_opmode_blocking) # Target
+        res,self.v0=vrep.simxGetObjectHandle(self.clientID_aux,'Vision_sensor',vrep.simx_opmode_oneshot_wait) 
         self.err_code,self.target_handle = vrep.simxGetObjectHandle(self.clientID_aux,"Quadcopter_target",vrep.simx_opmode_blocking)
         self.err_code,self.target_handle_1 = vrep.simxGetObjectHandle(self.clientID_aux,"Quadcopter",vrep.simx_opmode_blocking)
         self.err_code,self.local_pos = vrep.simxGetObjectPosition(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_blocking)
@@ -48,13 +51,20 @@ class QuadCopterEnv(gym.Env):
         self.x_center = 0
         self.target_location = Point(0,0,0)
         self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Box(low=0,high=50,shape=(1,20))
+        #self.observation_space = spaces.Box(low=0,high=50,shape=(1,20))
+        self.observation_space = spaces.Discrete(1)
         self.reward_range = (-np.inf, np.inf)
         self.temporary_state=np.zeros(shape=(1,20))
         self.previous_area=0
         self.previous_x=0
         self.seed()
-
+        self.x_min = 0
+        self.x_max = 0
+        self.y_min = 0
+        self.y_max = 0
+        self.prev_x1 = 0
+        self.prev_x2 = 0
+        self.sub_img = 0
 
     def calculate_target_distance(self,target_location_x,target_location_y):
         self.err_code,self.local_pos = vrep.simxGetObjectPosition(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)
@@ -68,20 +78,68 @@ class QuadCopterEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
+    def improvedYolo(self):
+        err, resolution, Vrep_camera_image = vrep.simxGetVisionSensorImage(self.clientID_aux, self.v0, 0, vrep.simx_opmode_oneshot_wait)
+        img = np.array(Vrep_camera_image, dtype = np.uint8)
+        img.resize([resolution[0],resolution[0],3])
+        Rotated1_image = imutils.rotate(img, angle=180)
+        Vrep_camera_image = cv2.flip(Rotated1_image,1)
+        
+        x1 = self.x_min
+        y1 = self.y_max
+        x2 = self.x_max
+        y2 = self.y_min
+        if not (self.prev_x1==x1 and self.prev_x2 == x2):
+            ### Draw bounding box on original image
+            ### Sub-part of Detected image
+            detected_greyscale = cv2.cvtColor(Vrep_camera_image, cv2.COLOR_BGR2GRAY)
+            self.sub_img = detected_greyscale[y2:y1,x1:x2]
+
+        #### Correlation ####
+        #cor = signal.correlate2d (detected_greyscale,sub_img)
+        
+        method = eval('cv2.TM_CCOEFF_NORMED')
+        v_rep_camera = cv2.cvtColor(Vrep_camera_image, cv2.COLOR_BGR2GRAY)
+        res = cv2.matchTemplate(self.sub_img,v_rep_camera,method)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        top_left = max_loc
+        h, w = self.sub_img.shape
+        bottom_right = (top_left[0] + w, top_left[1] + h)
+
+        cv2.rectangle(Vrep_camera_image,top_left, bottom_right, 255, 2)
+
+        #print(cor.shape)
+        #print(x1,x2,y1,y2)
+        cv2.imshow('frame', Vrep_camera_image)
+        cv2.waitKey(1)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("exit")
+        self.prev_x1 = x1
+        self.prev_x2 = x2
+
+
     def box_callback(self,data):
-        self.temporary_state=np.zeros(shape=(1,20))
+        #self.temporary_state=np.zeros(shape=(1,20))
         #print(data.bounding_boxes[1].xmin)
+
         for i in range(len(data.bounding_boxes)):
-            self.x_center = (data.bounding_boxes[i].xmin + (data.bounding_boxes[i].xmax - data.bounding_boxes[i].xmin)/2)/10
-            self.y_center = data.bounding_boxes[i].ymin + (data.bounding_boxes[i].ymax - data.bounding_boxes[i].ymin)/2
-            self.area = (data.bounding_boxes[i].xmax-data.bounding_boxes[i].xmin) * (data.bounding_boxes[i].ymax-data.bounding_boxes[i].ymin)
-            self.area = round(self.area/250)
-            self.temporary_state[0,i]=self.area
-            self.temporary_state[0,i+10]=self.x_center
-            #if self.x_center > 128:
-                #self.box_coor = (self.x_center - 128)/5
-            #else:
-                #self.box_coor = (128 - self.x_center)/5
+            self.x_min = data.bounding_boxes[i].xmin 
+            self.x_max = data.bounding_boxes[i].xmax 
+            self.y_max = data.bounding_boxes[i].ymax
+            self.y_min = data.bounding_boxes[i].ymin  
+            #self.done = True
+            # self.x_center = (data.bounding_boxes[i].xmin + (data.bounding_boxes[i].xmax - data.bounding_boxes[i].xmin)/2)
+            # self.y_center = data.bounding_boxes[i].ymin + (data.bounding_boxes[i].ymax - data.bounding_boxes[i].ymin)/2
+            # self.area = (data.bounding_boxes[i].xmax-data.bounding_boxes[i].xmin) * (data.bounding_boxes[i].ymax-data.bounding_boxes[i].ymin)
+            # self.area = round(self.area/250)
+            # if self.x_center > 128:
+            #     self.x_center = (self.x_center - 128)/5
+            # else:
+            #     self.x_center = (128 - self.x_center)/5
+                
+            #self.temporary_state[0,i]=self.area
+            #self.temporary_state[0,i+10]=self.x_center
+
             
     def reset(self):
         self.area = 0
@@ -102,11 +160,11 @@ class QuadCopterEnv(gym.Env):
         time.sleep(1)
         #data_pose, data_imu = self.take_observation()
         #fresh_distance,theta =  self.calculate_target_distance()
-        observation = self.temporary_state
+        observation = self.x_center
         return observation
 
     def step(self, action):
-        
+        self.improvedYolo()
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code,self.local_yaw = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)
         w = self.local_yaw[2]
@@ -150,15 +208,16 @@ class QuadCopterEnv(gym.Env):
                 break
 
         data_pose, data_imu = self.take_observation()
-        reward,done = self.process_data(data_pose, data_imu,self.distance,self.eulers) 
+        reward,done = self.process_data(data_pose, data_imu,self.distance) 
 
         if(self.previous_area==self.area and self.previous_x==self.x_center):
-            self.temporary_state=np.ones(shape=(1,20))
+            #self.temporary_state=np.ones(shape=(1,20))
+            self.area = 0
+            self.x_center = 128/5
         
-        state = self.temporary_state
+        state = self.x_center
         self.previous_area=self.area
         self.previous_x=self.x_center
-        print(self.temporary_state)
         return state, reward, done, {}
 
     def take_observation (self):
@@ -173,9 +232,9 @@ class QuadCopterEnv(gym.Env):
         
         return data_pose,data_imu
 
-    def process_data(self, data_position, data_imu,dst,eulerr):
-        pitch = eulerr[0]*180/math.pi
-        roll = eulerr[1]*180/math.pi
+    def process_data(self, data_position, data_imu,dst):
+        pitch = data_imu[0]*180/math.pi
+        roll = data_imu[1]*180/math.pi
         pitch_bad = not(-10 < pitch < 10)
         roll_bad = not(-10 < roll < 10)
         done = False
@@ -189,15 +248,14 @@ class QuadCopterEnv(gym.Env):
             done = True
             print("Out of area")
 
-        if self.temporary_state[0,0:9].any() > 12:
-            reward -= 5
-            done = True
-            print("Crashed with Human")
+        #if self.area[0,0:9].any() > 12:
+            #reward -= 5
+            #done = True
+            #print("Crashed with Human")
             
-        if (self.temporary_state[0,10:20].any() < 34 and self.temporary_state[0,10:20].any() >16):
-            reward -= 5
+        if self.x_center <= self.previous_x:
+            reward += 10
         else:
-            reward = +5
-
-        self.previous_area = self.area
+            reward -=5 
+        print(reward)
         return reward,done
