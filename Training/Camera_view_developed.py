@@ -29,6 +29,7 @@ tracking = Tracking()
 fake_img = cv2.imread('mushroom.jpeg')
 img_pub = rospy.Publisher('/vrep_image', Image,queue_size=10)
 x_coor_pub = rospy.Publisher('/box_x_coor', Float64, queue_size=10)
+box_area_pub = rospy.Publisher('/box_area', Float64, queue_size=10)
 rate = rospy.Rate(60.0)
 res,v0=vrep.simxGetObjectHandle(clientID_aux,'Vision_sensor',vrep.simx_opmode_oneshot_wait) 
 time.sleep(1)
@@ -86,8 +87,9 @@ while True:
 
         cv2.rectangle(Rotated2_image,top_left, bottom_right, 255, 2)
         x_center = top_left[0]+(bottom_right[0]-top_left[0])/2
+        area = h*w
         x_coor_pub.publish(x_center)
-
+        box_area_pub.publish(area)
         cv2.imshow('frame', Rotated2_image)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -102,6 +104,7 @@ while True:
         msg_frame = CvBridge().cv2_to_imgmsg(img,"bgr8")
         img_pub.publish(msg_frame)
         x_coor_pub.publish(x_center)
+        box_area_pub.publish(area)
         vrep.simxFinish(-1)
         clientID_aux = vrep.simxStart('127.0.0.1',19999,True,True,5000,5)
 

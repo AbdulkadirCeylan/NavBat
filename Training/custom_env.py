@@ -39,6 +39,7 @@ class QuadCopterEnv(gym.Env):
 
         rospy.init_node("custom_env",anonymous=True)
         rospy.Subscriber('/box_x_coor',Float64,self.box_callback)
+        rospy.Subscriber('/box_area',Float64,self.box_area)
         #self.err_code,self.target_handle_target = vrep.simxGetObjectHandle(self.clientID_aux,"Target",vrep.simx_opmode_blocking) # Target
         self.err_code,self.target_handle = vrep.simxGetObjectHandle(self.clientID_aux,"Quadcopter_target",vrep.simx_opmode_blocking)
         self.err_code,self.target_handle_1 = vrep.simxGetObjectHandle(self.clientID_aux,"Quadcopter",vrep.simx_opmode_blocking)
@@ -47,11 +48,13 @@ class QuadCopterEnv(gym.Env):
         self.err_code, self.eulers = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.x_center = 0
+        self.area = 0
+        self.previous_area = 0
+        self.previous_x = 0
         self.action_space = spaces.Discrete(3)
-        #self.observation_space = spaces.Box(low=0,high=50,shape=(1,20))
-        self.observation_space = spaces.Discrete(1)
+        self.observation_space = spaces.Box(low=0,high=50,shape=(1,2))
         self.reward_range = (-np.inf, np.inf)
-        self.temporary_state=np.zeros(shape=(1,20))
+        self.temporary_state=np.zeros(shape=(1,2))
         self.previous_x= 0
         self.seed()
 
@@ -69,16 +72,16 @@ class QuadCopterEnv(gym.Env):
         return [seed]
 
     def box_callback(self,data):
-        #data = float(data)
-        self.x_center = data.data
-            
+        self.x_center = data.data/256
+
+    def box_area(self,data):
+        self.area = data.data/26000
+
     def reset(self):
         self.area = 0
         y = random.randint(-2,2)
         x = random.randint(-2,2)
         yaw = random.random()*3
-        #y_target = random.randint(-2,2)
-        #err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle_target,-1,[12,y_target,1],vrep.simx_opmode_streaming)  # Problem is opmode_streaming
         err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle_1,-1,[x,y,1],vrep.simx_opmode_streaming)
         err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,[0,0,yaw],vrep.simx_opmode_streaming)
         err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle,-1,[x,y,1],vrep.simx_opmode_streaming)  
@@ -89,9 +92,8 @@ class QuadCopterEnv(gym.Env):
         err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,[0,0,yaw],vrep.simx_opmode_oneshot) 
         status = vrep.simxStartSimulation(self.clientID_aux, vrep.simx_opmode_oneshot_wait)
         time.sleep(1)
-        #data_pose, data_imu = self.take_observation()
-        #fresh_distance,theta =  self.calculate_target_distance()
-        observation = self.x_center
+   
+        observation = self.temporary_state
         return observation
 
     def step(self, action):
@@ -140,15 +142,19 @@ class QuadCopterEnv(gym.Env):
 
         data_pose, data_imu = self.take_observation()
         reward,done = self.process_data(data_pose, data_imu,self.distance) 
+        self.temporary_state[0,0]= self.area
+        self.temporary_state[0,1] = self.x_center
+        print(self.temporary_state)
 
-        if self.previous_x==self.x_center:
-            #self.temporary_state=np.ones(shape=(1,20))
+        if self.previous_area==self.area and self.previous_x==self.x_center:
+            self.temporary_state=np.zeros(shape=(1,2))
             self.x_center = 0
-        
-        state = self.x_center
+            self.area = 0
+
+
+        state = self.temporary_state
         self.previous_area=self.area
         self.previous_x=self.x_center
-        print(self.x_center)
         return state, reward, done, {}
 
     def take_observation (self):
@@ -179,13 +185,12 @@ class QuadCopterEnv(gym.Env):
             done = True
             print("Out of area")
 
-        #if self.area[0,0:9].any() > 12:
-            #reward -= 5
-            #done = True
-            #print("Crashed with Human")
+        if self.area > self.previous_area:
+            reward -= 1
+            print("Crashed with Human")
             
         if self.x_center <= self.previous_x:
-            reward += 10
+            reward += 0.5
         else:
             reward -=5 
         #print(reward)
