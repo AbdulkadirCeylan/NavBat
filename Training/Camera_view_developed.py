@@ -40,7 +40,8 @@ prev_x2 = 0
 detected_greyscale = 0
 sub_img = 0
 x_center = 0
-
+box_history = np.zeros(15)
+k = 0
 while True:
     #getting image
     err, resolution, image = vrep.simxGetVisionSensorImage(clientID_aux, v0, 0, vrep.simx_opmode_oneshot_wait)
@@ -52,34 +53,31 @@ while True:
         Rotated2_image = cv2.flip(Rotated1_image,1)
         msg_frame = CvBridge().cv2_to_imgmsg(Rotated2_image,"bgr8")
         img_pub.publish(msg_frame)
-        
+        if k >= 15:
+            k = 0
+
         x1 = tracking.x_min
         y1 = tracking.y_max
         x2 = tracking.x_max
         y2 = tracking.y_min
+        box_history[k] = x1
         if not (prev_x1==x1 and prev_x2 == x2):
             ### Draw bounding box on original image
             ### Sub-part of Detected image
             detected_greyscale = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
             sub_img = detected_greyscale[y2:y1,x1:x2]
 
-        #### Correlation ####
-        #cor = signal.correlate2d (detected_greyscale,sub_img)
-
+        result = all(elem == box_history[0] for elem in box_history)
+        if result is True: 
+            detected_greyscale = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
+            detected_greyscale[:,:] = 255
+            sub_img= detected_greyscale
+            print("in")
+        
+        print(box_history)
         method = eval('cv2.TM_CCOEFF_NORMED')
         v_rep_camera = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
         res = cv2.matchTemplate(sub_img,v_rep_camera,method)
-        # h, w = sub_img.shape
-        # i = 0
-        # threshold = 0.8
-        # loc = np.where( res >= threshold)
-        # for pt in zip(*loc[::-1]):
-        #     if i <2:
-        #         top_left = pt
-        #         bottom_right = (top_left[0] + w, top_left[1] + h)
-        #         cv2.rectangle(Rotated2_image, pt, bottom_right, color, 2)
-        #         x_center = top_left[0]+(bottom_right[0]-top_left[0])/2
-        #         i += 1
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         top_left = max_loc
         h, w = sub_img.shape
@@ -97,7 +95,7 @@ while True:
         
         prev_x1 = x1
         prev_x2 = x2
-
+        k = k +1
     else:
 
         img = np.array(fake_img, dtype = np.uint8)
