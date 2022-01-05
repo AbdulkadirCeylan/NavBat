@@ -42,6 +42,7 @@ sub_img = 0
 x_center = 0
 box_history = np.zeros(15)
 k = 0
+area = 0
 while True:
     #getting image
     err, resolution, image = vrep.simxGetVisionSensorImage(clientID_aux, v0, 0, vrep.simx_opmode_oneshot_wait)
