@@ -72,10 +72,10 @@ class QuadCopterEnv(gym.Env):
         return [seed]
 
     def box_callback(self,data):
-        self.x_center = data.data/256
+        self.x_center = np.round(data.data/256,decimals=2)
 
     def box_area(self,data):
-        self.area = data.data/26000
+        self.area = np.round(data.data/26000,decimals=2)
 
     def reset(self):
         self.area = 0
