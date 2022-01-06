@@ -64,12 +64,12 @@ class QuadCopterEnv(gym.Env):
         data_u2=np.array(data_u2)
         
         if len(data_u1>1):
-            laser_beam_u1=np.zeros(45)
-            laser_beam_u2=np.zeros(45)
-            for k in range(45):
+            laser_beam_u1=np.zeros(30)
+            laser_beam_u2=np.zeros(30)
+            for k in range(30):
                 laser_beam_u1[k]=data_u1[5+4*k]
                 laser_beam_u2[k]=data_u2[5+4*k]    
-            laser_beam_u1 = np.insert(laser_beam_u1,45,laser_beam_u2)
+            laser_beam_u1 = np.insert(laser_beam_u1,30,laser_beam_u2)
             laser_beam_u1[laser_beam_u1<0.01]=2000
             r_min=laser_beam_u1[laser_beam_u1<1.5]    
             b_angles = np.where(laser_beam_u1<1.5) 
@@ -177,7 +177,7 @@ class QuadCopterEnv(gym.Env):
 
         ####### Lidar Distance Check ######
         distance,bearing = self.readLidarData()
-        while distance < 1.2:
+        while distance < 1.5:
             distance,bearing = self.readLidarData()
             print(distance,bearing)
             self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)
