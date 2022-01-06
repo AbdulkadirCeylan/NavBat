@@ -134,7 +134,6 @@ class QuadCopterEnv(gym.Env):
         
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code,self.local_yaw = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)
-
         w = self.local_yaw[2]
         if (action == 0):
             degree = -30*math.pi/180
@@ -153,7 +152,7 @@ class QuadCopterEnv(gym.Env):
         desired_x = abs(self.local_angles[2]*180/math.pi)
         sum_360 = x_deg + desired_x
         t0 = time.time()
-        while not (abs(self.local_angles[2])-0.1 < abs(x) and  abs(x) < abs(self.local_angles[2])+0.1) and not ((sum_360)+5 > 360 and (sum_360)-5 < 360):
+        while not (abs(self.local_angles[2])-0.05 < abs(x) and  abs(x) < abs(self.local_angles[2])+0.05) and not ((sum_360)+5 > 360 and (sum_360)-5 < 360):
             self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)
             desired_x = abs(self.local_angles[2]*180/math.pi)
             sum_360 = x_deg + desired_x
@@ -170,7 +169,7 @@ class QuadCopterEnv(gym.Env):
         self.distance = 1
         t1 = time.time()
         err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle,-1,[loc_x+move_as_x,loc_y +move_as_y,1.25],vrep.simx_opmode_streaming)
-        while self.distance > 0.10:
+        while self.distance > 0.05:
             self.distance =  self.calculate_target_distance(loc_x+move_as_x,loc_y +move_as_y)
             if(time.time()-t1) >5:
                 break
@@ -178,12 +177,13 @@ class QuadCopterEnv(gym.Env):
 
         ####### Lidar Distance Check ######
         distance,bearing = self.readLidarData()
-        while distance < 1.5:
+        while distance < 1.2:
             distance,bearing = self.readLidarData()
             print(distance,bearing)
-            w = self.local_yaw[2]
+            self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)
+            w = self.local_angles[2]
             degree = -bearing*math.pi/180
-            err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle,-1,[0,0,w+degree],vrep.simx_opmode_streaming)  # Left
+            err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle,-1,[0,0,w+0.3],vrep.simx_opmode_streaming)  # Left
 
         data_pose, data_imu = self.take_observation()
         reward,done = self.process_data(data_pose, data_imu,self.distance,self.eulers) 

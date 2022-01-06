@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from os import PRIO_PGRP
+from re import escape
 import sim as vrep
 import random
 import math
@@ -32,7 +33,7 @@ class Main:
         self.err_code,self.target_handle_1 = vrep.simxGetObjectHandle(clientID_aux,"Quadcopter",vrep.simx_opmode_blocking)
         rospy.Subscriber('darknet_ros/bounding_boxes',BoundingBoxes,self.box_callback)
         self.escape = False
-
+        rospy.init_node("main.py")
 
     def PRM_action(self,rx_sampled,ry_sampled):
         target_reached = False
@@ -95,7 +96,6 @@ class Main:
         for box in data.bounding_boxes:
             if box.Class == "person":
                 self.escape = True # if a person seen enabled the RL Code
-
 
     def calculate_step_dist(self,target_location_x, target_location_y):
         err_code,local_pos_drone = vrep.simxGetObjectPosition(clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_blocking) # Drone pos

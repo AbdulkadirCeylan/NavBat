@@ -11,7 +11,7 @@ def main():
     env = gym.make('QuadcopterLiveShow-v2')
     model = DQN.load("Training-v0")
     obs = env.reset()
-    for k in range(5):
+    for k in range(12):
         action, _states = model.predict(obs,deterministic=True)
         obs, _, _, info = env.step(action)
 
