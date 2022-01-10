@@ -154,7 +154,7 @@ class QuadCopterEnv(gym.Env):
         state = self.temporary_state
         self.previous_area=self.area
         self.previous_xerror=self.x_centererror
-        print(self.area,self.x_centererror)
+        print(self.x_centererror)
         return state, reward, done, {}
 
     def take_observation (self):
@@ -186,13 +186,12 @@ class QuadCopterEnv(gym.Env):
             print("Out of area")
 
         if self.area > self.previous_area:
-            reward -= 2
-        if self.area < self.previous_area:
-            reward += 2    
+            reward -= 1
+          
             
         if self.x_centererror >= self.previous_xerror:
-            reward += 1
+            reward += 2
         else :
-            reward -= 5
-        print("Reward: ",reward)
+            reward -= 2
+        #print("Reward: ",reward)
         return reward,done

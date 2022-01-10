@@ -73,9 +73,9 @@ while True:
             detected_greyscale = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
             detected_greyscale[:,:] = 255
             sub_img= detected_greyscale
-            print("in")
+            
         
-        print(box_history)
+        
         method = eval('cv2.TM_CCOEFF_NORMED')
         v_rep_camera = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
         res = cv2.matchTemplate(sub_img,v_rep_camera,method)
