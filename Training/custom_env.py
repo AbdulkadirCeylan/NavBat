@@ -48,9 +48,10 @@ class QuadCopterEnv(gym.Env):
         self.err_code, self.eulers = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.x_center = 0
+        self.x_centererror=0
         self.area = 0
         self.previous_area = 0
-        self.previous_x = 0
+        self.previous_xerror = 0
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(low=0,high=50,shape=(1,2))
         self.reward_range = (-np.inf, np.inf)
@@ -73,6 +74,7 @@ class QuadCopterEnv(gym.Env):
 
     def box_callback(self,data):
         self.x_center = np.round(data.data/256,decimals=2)
+        self.x_centererror=abs(self.x_center-0.5)
 
     def box_area(self,data):
         self.area = np.round(data.data/26000,decimals=2)
@@ -151,8 +153,8 @@ class QuadCopterEnv(gym.Env):
 
         state = self.temporary_state
         self.previous_area=self.area
-        self.previous_x=self.x_center
-        print(self.area,self.x_center)
+        self.previous_xerror=self.x_centererror
+        print(self.area,self.x_centererror)
         return state, reward, done, {}
 
     def take_observation (self):
@@ -185,10 +187,12 @@ class QuadCopterEnv(gym.Env):
 
         if self.area > self.previous_area:
             reward -= 2
+        if self.area < self.previous_area:
+            reward += 2    
             
-        if self.x_center <= self.previous_x:
-            reward += 5
-        else:
-            reward -=5 
+        if self.x_centererror >= self.previous_xerror:
+            reward += 1
+        else :
+            reward -= 5
         print("Reward: ",reward)
         return reward,done
