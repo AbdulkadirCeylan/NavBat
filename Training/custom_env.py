@@ -76,8 +76,11 @@ class QuadCopterEnv(gym.Env):
         self.x_center = np.round(data.data/256,decimals=2)
         self.x_centererror=abs(self.x_center-0.5)
 
+
     def box_area(self,data):
         self.area = np.round(data.data/26000,decimals=2)
+        if self.area == 2.52:
+            self.area = 0
 
     def reset(self):
         self.area = 0
@@ -143,18 +146,17 @@ class QuadCopterEnv(gym.Env):
                 break
 
         data_pose, data_imu = self.take_observation()
-        reward,done = self.process_data(data_pose, data_imu,self.distance) 
+        reward,done = self.process_data(data_pose, data_imu,self.distance)
+         
         self.temporary_state[0,0]= self.area
         self.temporary_state[0,1] = self.x_center
 
         if self.previous_area==self.area and self.previous_x==self.x_center:
             self.temporary_state=np.zeros(shape=(1,2))
 
-
         state = self.temporary_state
         self.previous_area=self.area
         self.previous_xerror=self.x_centererror
-        print(self.x_centererror)
         return state, reward, done, {}
 
     def take_observation (self):
@@ -185,13 +187,12 @@ class QuadCopterEnv(gym.Env):
             done = True
             print("Out of area")
 
-        if self.area > self.previous_area:
-            reward -= 1
-          
-            
-        if self.x_centererror >= self.previous_xerror:
-            reward += 2
-        else :
+        if self.temporary_state[0,0] > 0.4:
             reward -= 2
-        #print("Reward: ",reward)
+            
+        if self.x_centererror > 0.25:
+            reward += 2
+        if self.x_centererror < 0.25 and self.x_centererror >0:
+            reward -= 2
+        print("Reward: ", reward)
         return reward,done
