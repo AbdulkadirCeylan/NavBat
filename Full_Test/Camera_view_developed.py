@@ -53,14 +53,9 @@ while True:
         x2 = tracking.x_max
         y2 = tracking.y_min
         if not (prev_x1==x1 and prev_x2 == x2):
-            print(x1,y1)
-            ### Draw bounding box on original image
             ### Sub-part of Detected image
             detected_greyscale = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
             sub_img = detected_greyscale[y2:y1,x1:x2]
-
-        #### Correlation ####
-        #cor = signal.correlate2d (detected_greyscale,sub_img)
         
         method = eval('cv2.TM_CCOEFF_NORMED')
         v_rep_camera = cv2.cvtColor(Rotated2_image, cv2.COLOR_BGR2GRAY)
@@ -71,10 +66,8 @@ while True:
         bottom_right = (top_left[0] + w, top_left[1] + h)
 
         cv2.rectangle(Rotated2_image,top_left, bottom_right, 255, 2)
-
-        #print(cor.shape)
-        #print(x1,x2,y1,y2)
-        cv2.imshow('frame', Rotated2_image)
+        cv2.putText(Rotated2_image, 'Person', (top_left[0]-10, top_left[1]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 1)
+        cv2.imshow('Template Matched Detection', sub_img)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break

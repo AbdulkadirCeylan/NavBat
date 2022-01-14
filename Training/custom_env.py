@@ -48,12 +48,11 @@ class QuadCopterEnv(gym.Env):
         self.err_code, self.eulers = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.x_center = 0
-        self.x_centererror=0
         self.area = 0
         self.previous_area = 0
-        self.previous_xerror = 0
+        self.previous_center_dist = 0
         self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Box(low=0,high=50,shape=(1,2))
+        self.observation_space = spaces.Box(low=0,high=1,shape=(1,2))
         self.reward_range = (-np.inf, np.inf)
         self.temporary_state=np.zeros(shape=(1,2))
         self.previous_x= 0
@@ -74,13 +73,14 @@ class QuadCopterEnv(gym.Env):
 
     def box_callback(self,data):
         self.x_center = np.round(data.data/256,decimals=2)
-        self.x_centererror=abs(self.x_center-0.5)
+        self.dist_from_center=abs(self.x_center-0.5)
 
 
     def box_area(self,data):
         self.area = np.round(data.data/26000,decimals=2)
         if self.area == 2.52:
             self.area = 0
+
 
     def reset(self):
         self.area = 0
@@ -155,8 +155,6 @@ class QuadCopterEnv(gym.Env):
             self.temporary_state=np.zeros(shape=(1,2))
 
         state = self.temporary_state
-        self.previous_area=self.area
-        self.previous_xerror=self.x_centererror
         return state, reward, done, {}
 
     def take_observation (self):
@@ -188,11 +186,20 @@ class QuadCopterEnv(gym.Env):
             print("Out of area")
 
         if self.temporary_state[0,0] > 0.4:
-            reward -= 2
+            reward -= 20
             
-        if self.x_centererror > 0.25:
-            reward += 2
-        if self.x_centererror < 0.25 and self.x_centererror >0:
-            reward -= 2
+        # if self.dist_from_center > 0.3 or self.dist_from_center == 0:
+        #     reward += 15
+        # if self.dist_from_center < 0.3 and self.dist_from_center >0:
+        #     reward -= 20
+
+        if self.dist_from_center > self.previous_center_dist:
+            reward += 15
+            print("kacıyor")
+        if self.dist_from_center < self.previous_center_dist:
+            reward -= 15
+            print("yaklasıyor")
+
         print("Reward: ", reward)
+        self.previous_center_dist =self.dist_from_center
         return reward,done
