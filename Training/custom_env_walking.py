@@ -21,8 +21,8 @@ from std_msgs.msg import Float64
 
 #register the training environment in the gym as an available one
 reg = register(
-    id='QuadcopterLiveShow-v2',
-    entry_point='custom_env_trained_model:QuadCopterEnv',
+    id='QuadcopterLiveShow-v1',
+    entry_point='custom_env_walking:QuadCopterEnv',
     )
 
 class QuadCopterEnv(gym.Env):
@@ -37,10 +37,9 @@ class QuadCopterEnv(gym.Env):
         else:
             print("Not connected to remote API server")
             sys.exit("Could not connect")
-
         rospy.init_node("custom_env",anonymous=True)
         rospy.Subscriber('/box_x_coor',Float64,self.box_callback)
-        rospy.Subscriber('/box_area',Float64,self.box_area)
+        #rospy.Subscriber('/box_area',Float64,self.box_area)
         #self.err_code,self.target_handle_target = vrep.simxGetObjectHandle(self.clientID_aux,"Target",vrep.simx_opmode_blocking) # Target
         self.err_code,self.target_handle = vrep.simxGetObjectHandle(self.clientID_aux,"Quadcopter_target",vrep.simx_opmode_blocking)
         self.err_code,self.target_handle_1 = vrep.simxGetObjectHandle(self.clientID_aux,"Quadcopter",vrep.simx_opmode_blocking)
@@ -49,14 +48,16 @@ class QuadCopterEnv(gym.Env):
         self.err_code, self.eulers = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.err_code, self.local_angles = vrep.simxGetObjectOrientation(self.clientID_aux,self.target_handle,-1,vrep.simx_opmode_oneshot_wait)   # Get Object Orientation
         self.x_center = 0
+        self.center_locations = np.zeros(5)
         self.prev_x_center = 0
         self.area = 0
         self.action_space = spaces.Discrete(2)
+        #self.observation_space = spaces.Discrete(1)
         self.observation_space = spaces.Box(low=-1,high=1,shape=(1,1))
-        self.reward_range = (-np.inf, np.inf)
         self.temporary_state=np.zeros(shape=(1,1))
         self.direction = 0
-        self.heading = "no"
+        self.k = 0
+        self.heading = 0
         self.seed()
 
 
@@ -76,15 +77,35 @@ class QuadCopterEnv(gym.Env):
         self.x_center = np.round(data.data/256,decimals=2)
         if self.x_center == 0.5:
             self.x_center = 0
+        
+        # self.center_locations[self.k] = self.x_center
+        # if self.k >=4:
+        #     self.k = 0
+        # else:
+        #     self.k = self.k+1
+        #time.sleep(0.1)
 
-
-    def box_area(self,data):
-        self.area = np.round(data.data/26000,decimals=2)
-        if self.area == 2.52:
-            self.area = 0
-
+    #def box_area(self,data):
+        #self.area = np.round(data.data/26000,decimals=2)
+        #if self.area == 2.52:
+            #self.area = 0
+        
 
     def reset(self):
+        y = 0
+        x = 0
+        yaw = 0
+        err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle_1,-1,[x,y,1],vrep.simx_opmode_streaming)
+        err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,[0,0,yaw],vrep.simx_opmode_streaming)
+        err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle,-1,[x,y,1],vrep.simx_opmode_streaming)  
+        err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle,-1,[0,0,yaw],vrep.simx_opmode_streaming)  
+        status_one = vrep.simxStopSimulation(self.clientID_aux, vrep.simx_opmode_oneshot_wait)
+        time.sleep(1)
+        err_code = vrep.simxSetObjectPosition(self.clientID_aux,self.target_handle_1,-1,[x,y,1],vrep.simx_opmode_oneshot) 
+        err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle_1,-1,[0,0,yaw],vrep.simx_opmode_oneshot) 
+        status = vrep.simxStartSimulation(self.clientID_aux, vrep.simx_opmode_oneshot_wait)
+        time.sleep(1)
+   
         observation = self.temporary_state
         return observation
 
@@ -96,12 +117,14 @@ class QuadCopterEnv(gym.Env):
         if (action == 0):
             degree = -0*math.pi/180
             err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle,-1,[0,0,w+degree],vrep.simx_opmode_streaming)  # Right
-            print("right")
+
+        # if (action == 1): 
+        #     degree = 0*math.pi/180
+        #     err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle,-1,[0,0,w+degree],vrep.simx_opmode_streaming)  # 
 
         if (action == 1): 
             degree = 0*math.pi/180
             err_code = vrep.simxSetObjectOrientation(self.clientID_aux,self.target_handle,-1,[0,0,w+degree],vrep.simx_opmode_streaming)  # Left
-            print("left")
 
         x = w+degree
         x_deg = abs(x * 180/math.pi)
@@ -118,10 +141,26 @@ class QuadCopterEnv(gym.Env):
         data_pose, data_imu = self.take_observation()
         reward,done = self.process_data(data_pose, data_imu)
         self.direction= self.x_center-self.prev_x_center
+        if self.direction < 0: #Human moving to left side of the camera frame
+            #print("Left")
+            if action == 0: # Right
+                reward += 10
+            if action == 1: # Left
+                reward -= 30 
+
+        if self.direction > 0:                  # Human moving to right side of the camera frame
+            #print("Right")
+            if action == 1: ## Left
+                reward += 10
+            if action == 0: ## Right
+                reward -= 30
+
         self.temporary_state[0,0]= self.direction
-        #self.temporary_state[0,1] = self.x_center
+        #print("state: ",self.temporary_state)
+        print(reward)
         self.prev_x_center = self.x_center
         state = self.temporary_state
+        time.sleep(0.2)
         return state, reward, done, {}
 
     def take_observation (self):

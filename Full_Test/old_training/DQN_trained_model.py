@@ -9,14 +9,14 @@ import matplotlib.pyplot as plt
 
 def main():
     env = gym.make('QuadcopterLiveShow-v2')
-    model = DQN.load("Training-last5")
+    model = DQN.load("Training-last2")
     obs = env.reset()
-    while True:
+    for k in range(12):
         action, _states = model.predict(obs,deterministic=True)
         obs, _, _, info = env.step(action)
 
-    #done = True
-    #return done
+    done = True
+    return done
 
 
 if __name__ == '__main__':
